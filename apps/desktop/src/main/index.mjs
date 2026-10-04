@@ -782,22 +782,8 @@ const buildApplicationMenu = () => {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 };
 
-const buildTrayContextMenu = () => {
-  const copy = desktopMenuCopy(app.getLocale());
-  return Menu.buildFromTemplate([
-    { label: copy.show, click: () => showWindow(mainWindow) },
-    { label: copy.screenshotToNote, click: () => void captureScreenshotToNote() },
-    ...(updateState === "downloaded" ? [{ label: copy.restartToUpdate, click: () => installDownloadedUpdate() }] : []),
-    { type: "separator" },
-    { label: copy.quit, click: () => { isQuitting = true; app.quit(); } },
-  ]);
-};
-
 const createTray = () => {
-  if (tray && !tray.isDestroyed?.()) {
-    tray.setContextMenu(buildTrayContextMenu());
-    return;
-  }
+  const copy = desktopMenuCopy(app.getLocale());
   const iconPath = trayIconPath({
     isPackaged: app.isPackaged,
     platform: process.platform,
@@ -808,7 +794,13 @@ const createTray = () => {
   if (process.platform === "darwin") icon.setTemplateImage(true);
   tray = new Tray(icon);
   tray.setToolTip("EdgeEver");
-  tray.setContextMenu(buildTrayContextMenu());
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: copy.show, click: () => showWindow(mainWindow) },
+    { label: copy.screenshotToNote, click: () => void captureScreenshotToNote() },
+    ...(updateState === "downloaded" ? [{ label: copy.restartToUpdate, click: () => installDownloadedUpdate() }] : []),
+    { type: "separator" },
+    { label: copy.quit, click: () => { isQuitting = true; app.quit(); } },
+  ]));
   tray.on("double-click", () => showWindow(mainWindow));
 };
 
@@ -1007,12 +999,9 @@ const preparePackagedRendererOrigin = async () => {
 };
 
 const refreshTrayMenu = () => {
-  if (isQuitting) return;
-  if (!tray || tray.isDestroyed?.()) {
-    createTray();
-    return;
-  }
-  tray.setContextMenu(buildTrayContextMenu());
+  if (!tray) return;
+  tray.destroy();
+  createTray();
 };
 
 const desktopUpdateStatus = () => ({
